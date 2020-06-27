@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Hello OpenCV.js</title>
+
+</head>
+
+<body>
+  <h2>Hello OpenCV.js</h2>
+  <div>
+    <div class="inputoutput">
+      <img id="imageSrc" alt="No Image" />
+      <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+      <div class="caption">DB <input type="file" id="dbfile" name="file" /></div>
+    </div>
+    <div class="inputoutput">
+      <canvas id="canvasOutput"></canvas>
+      <div class="caption">canvasOutput</div>
+    </div>
+  </div>
+  <a href="#" id="downloadButton">Download Image</a><br />
+
+
+
+  <video id="player" autoplay>
+    <!-- <source src="video.mp4" type="video/mp4"> -->
+  </video>
+  <button id="capture">Capture</button>
+
+  <canvas id="canvas"></canvas>
+
+  <script src='Tesseract/tesseract.min.js'></script>
+  <script src="detection.js"></script>
+  <script>
+    const player = document.getElementById('player');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const captureButton = document.getElementById('capture');
+
+    const constraints = {
+      video: true,
+    };
+    // // Attach the video stream to the video element and autoplay.
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then((stream) => {
+        player.srcObject = stream;
+      });
+    console.log(player.srcObject)
+
+
+    async function main() {
+
+      [DB_var, tess_worker] = await Promise.all([load_database('test.sqlite'), initialize_tesseract()]);
+
+      // var DB_var = await load_database('test.sqlite')
+      // var tess_worker = initialize_tesseract()
+
+      console.log(DB_var)
+      console.log(tess_worker)
+
+      captureButton.addEventListener('click', async function () {
+        console.log("Snapshot Taken")
+        // Draw the video frame to the canvas.
+        context.drawImage(player, 0, 0, canvas.width, canvas.height);
+
+
+        let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+        let src = cv.matFromImageData(imgData);
+        let res = crop_image_border(src)
+        cv.imshow('canvasOutput', res)
+
+
+        config = {
+          locateFile: filename => `./Sql.js/${filename}`
+        }
+        console.log(DB_var)
+
+        const exampleImage = document.getElementById('canvasOutput')
+
+        var ocr_res = await OCR(tess_worker, exampleImage)
+        console.log(ocr_res)
+
+        initSqlJs(config).then(function (SQL) {
+          var Uints = new Uint8Array(DB_var);
+          db = new SQL.Database(Uints);
+
+          var st = "(Mana Drain U, .Instant ) - i Counter target spell.At the beginning of your next main phase, add an.amount of  to your mana pool equal to that spells converted mana cost.M / Enthusiasm is no match for preparation.ä UR d CQ SWANLAND"
+
+          // English request
+          // var res = db.exec("SELECT name, Text, flavorText, type, uuid FROM cards");
+          let min_dist = 99999999
+          let min_uuid = null
+
+          db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
+            var dt = levenshtein(st, row.name + row.type + row.Text + row.flavorText)
+            if (dt < min_dist) {
+              min_dist = dt
+              min_uuid = row.uuid
+            }
+
+          }, function () {
+            console.log("min_uuid =", min_uuid)
+            get_prices_for_uuid(db, min_uuid)
+            console.log("FIN")
+          });
+        });
+      })
+    }
+
+    main()
+
+
+
+
+
+
+    // // Attach the video stream to the video element and autoplay.
+    // navigator.mediaDevices.getUserMedia(constraints)
+    //   .then((stream) => {
+    //     player.srcObject = stream;
+    //   });
+    // console.log(player.srcObject)
+  </script>
+
+
+
+  <script src='./Sql.js/sql-asm.js'></script>
+  <script src='franc-min.js'></script>
+  <script async src="opencv.js" onload="console.log('Opencv Loaded');" type="text/javascript"></script>
+
+</body>
+
+</html>
