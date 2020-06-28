@@ -28,11 +28,6 @@
     const context = canvas.getContext('2d');
     const captureButton = document.getElementById('capture');
 
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then((stream) => {
-        player.srcObject = stream;
-      });
-
     var paragraph = document.getElementById("price");
 
     const constraints = {
