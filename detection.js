@@ -1,14 +1,7 @@
-let imgElement = document.getElementById('imageSrc')
-let inputElement = document.getElementById('fileInput')
-let dbFileElm = document.getElementById('dbfile')
-
-
-inputElement.addEventListener('change', (e) => { imgElement.src = URL.createObjectURL(e.target.files[0]); }, false)
-
 
 function crop_image_border(mat) {
     // let mat = cv.imread(imgElement)
-    maintain_aspect_ratio_resize(mat, mat, width = 750)
+    // maintain_aspect_ratio_resize(mat, mat, width = 750)
 
     let mat_gray = new cv.Mat();
     cv.cvtColor(mat, mat_gray, cv.COLOR_RGBA2GRAY, 0);
@@ -60,58 +53,9 @@ function crop_image_border(mat) {
     let rect = cv.boundingRect(hull)
     let rect2 = new cv.Rect(rect.x, rect.y, rect.width, rect.height)
     var final = mat.roi(rect2)
-    maintain_aspect_ratio_resize(final, final, 750)
+    // maintain_aspect_ratio_resize(final, final, 750)
     return final
 }
-
-document.getElementById('downloadButton').onclick = function () {
-    this.href = document.getElementById("canvasOutput").toDataURL();
-    this.download = "image.png";
-};
-
-
-inputElement.addEventListener('change', (e) => { imgElement.src = URL.createObjectURL(e.target.files[0]); }, false)
-
-
-
-dbFileElm.addEventListener('change', (e) => {
-    console.log("OK")
-    config = {
-        locateFile: filename => `./Sql.js/${filename}`
-    }
-
-    initSqlJs(config).then(function (SQL) {
-        var f = e.target.files[0];
-        var r = new FileReader();
-        r.readAsArrayBuffer(f);
-
-        r.onload = function () {
-            var Uints = new Uint8Array(r.result);
-            db = new SQL.Database(Uints);
-
-            var st = "(Mana Drain U, .Instant ) - i Counter target spell.At the beginning of your next main phase, add an.amount of  to your mana pool equal to that spells converted mana cost.M / Enthusiasm is no match for preparation.ä UR d CQ SWANLAND"
-
-
-            // English request
-            // var res = db.exec("SELECT name, Text, flavorText, type, uuid FROM cards");
-            let min_dist = 99999999
-            let min_uuid = null
-
-            db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
-                var dt = levenshtein(st, row.name + row.type + row.Text + row.flavorText)
-                if (dt < min_dist) {
-                    min_dist = dt
-                    min_uuid = row.uuid
-                }
-
-            }, function () {
-                console.log("min_uuid =", min_uuid)
-                get_prices_for_uuid(db, min_uuid)
-                console.log("FIN")
-            });
-        }
-    });
-}, false)
 
 
 async function load_database(db_filename) {
@@ -121,23 +65,12 @@ async function load_database(db_filename) {
 }
 
 
-// function load_database(db_filename) {
-//     var db_tmp;
-//     fetch(db_filename)
-//         .then(response => response.arrayBuffer())
-//         .then(data => db_tmp = data)
-//         .then(() => console.log(db_tmp))
-//     console.log(db_tmp)
-//     return db_tmp
-// }
-
-
-
 function get_prices_for_uuid(db, uuid) {
     var res = []
     db.each("SELECT price, type FROM prices where uuid=$uuid", { $uuid: uuid }, function (row) {
         res.push(row)
     }, function () { console.log(res) });
+    return res
 }
 
 
@@ -163,8 +96,8 @@ async function initialize_tesseract() {
 }
 
 async function OCR(tess_worker, image) {
-    await work()
     var res = {};
+    await work()
 
     async function work() {
 
@@ -189,48 +122,6 @@ async function OCR(tess_worker, image) {
     }
     return res
 }
-
-imgElement.onload = function () {
-    let cont_img = crop_image_border(imgElement)
-    cv.imshow('canvasOutput', cont_img)
-
-    const exampleImage = document.getElementById('canvasOutput')
-
-    const worker = Tesseract.createWorker({
-        workerPath: './Tesseract/worker.min.js',
-        langPath: './Tesseract/Lang/',
-        corePath: './Tesseract/tesseract-core.wasm.js',
-        logger: m => console.log(m)
-    });
-    Tesseract.setLogging(false);
-    work();
-
-    async function work() {
-        await worker.load()
-        await worker.loadLanguage('fra+eng')
-        await worker.initialize('fra+eng')
-        await worker.setParameters({
-            tessedit_char_blacklist: '=<>#!;?[]“\"‘¢ï»~{}’ë¥ä_&@²$/£*µ§:\\_|'
-        });
-
-        let result = await worker.detect(exampleImage)
-        console.log(result.data)
-
-        result = await worker.recognize(exampleImage)
-        var lines = result.data.text.split("\n")
-
-        var filtered = lines.filter(non_phrasal)
-        console.log(filtered)
-
-        var final = filtered.join(' ')
-        console.log(final)
-
-        var lang = franc(final)
-        console.log(lang)
-
-        await worker.terminate();
-    }
-};
 
 function levenshtein(a, b) {
     var tmp;

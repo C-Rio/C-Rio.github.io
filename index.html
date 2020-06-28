@@ -3,24 +3,13 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Hello OpenCV.js</title>
+  <title>MTG card detection</title>
 
 </head>
 
 <body>
-  <h2>Hello OpenCV.js</h2>
-  <div>
-    <div class="inputoutput">
-      <img id="imageSrc" alt="No Image" />
-      <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
-      <div class="caption">DB <input type="file" id="dbfile" name="file" /></div>
-    </div>
-    <div class="inputoutput">
-      <canvas id="canvasOutput"></canvas>
-      <div class="caption">canvasOutput</div>
-    </div>
-  </div>
-  <a href="#" id="downloadButton">Download Image</a><br />
+  <p id="price">Price = </p>
+  <canvas id="canvasOutput"></canvas>
 
 
 
@@ -29,7 +18,7 @@
   </video>
   <button id="capture">Capture</button>
 
-  <canvas id="canvas"></canvas>
+  <canvas id="canvas" height="800" width="700"></canvas>
 
   <script src='Tesseract/tesseract.min.js'></script>
   <script src="detection.js"></script>
@@ -39,6 +28,13 @@
     const context = canvas.getContext('2d');
     const captureButton = document.getElementById('capture');
 
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then((stream) => {
+        player.srcObject = stream;
+      });
+
+    var paragraph = document.getElementById("price");
+
     const constraints = {
       video: true,
     };
@@ -47,15 +43,11 @@
       .then((stream) => {
         player.srcObject = stream;
       });
-    console.log(player.srcObject)
 
 
     async function main() {
 
-      [DB_var, tess_worker] = await Promise.all([load_database('test.sqlite'), initialize_tesseract()]);
-
-      // var DB_var = await load_database('test.sqlite')
-      // var tess_worker = initialize_tesseract()
+      [DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
 
       console.log(DB_var)
       console.log(tess_worker)
@@ -82,19 +74,21 @@
         var ocr_res = await OCR(tess_worker, exampleImage)
         console.log(ocr_res)
 
+        let min_dist = 99999999
+        let min_uuid = null
+
         initSqlJs(config).then(function (SQL) {
           var Uints = new Uint8Array(DB_var);
           db = new SQL.Database(Uints);
 
-          var st = "(Mana Drain U, .Instant ) - i Counter target spell.At the beginning of your next main phase, add an.amount of  to your mana pool equal to that spells converted mana cost.M / Enthusiasm is no match for preparation.ä UR d CQ SWANLAND"
+          if (ocr_res.lang == "eng")
+            query = "SELECT name, Text, flavorText, type, uuid FROM cards"
+          else if (ocr_res.lang == "fra")
+            query = "SELECT name, Text, flavorText, type, uuid FROM foreign_data"
 
-          // English request
-          // var res = db.exec("SELECT name, Text, flavorText, type, uuid FROM cards");
-          let min_dist = 99999999
-          let min_uuid = null
 
           db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
-            var dt = levenshtein(st, row.name + row.type + row.Text + row.flavorText)
+            var dt = levenshtein(ocr_res.text, row.name + row.type + row.Text + row.flavorText)
             if (dt < min_dist) {
               min_dist = dt
               min_uuid = row.uuid
@@ -102,9 +96,11 @@
 
           }, function () {
             console.log("min_uuid =", min_uuid)
-            get_prices_for_uuid(db, min_uuid)
-            console.log("FIN")
+            pri = get_prices_for_uuid(db, min_uuid)
+            paragraph.textContent += JSON.stringify(pri)
+
           });
+
         });
       })
     }
