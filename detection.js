@@ -1,7 +1,7 @@
 
 function crop_image_border(mat) {
     // let mat = cv.imread(imgElement)
-    // maintain_aspect_ratio_resize(mat, mat, width = 750)
+    maintain_aspect_ratio_resize(mat, mat, width = 750)
 
     let mat_gray = new cv.Mat();
     cv.cvtColor(mat, mat_gray, cv.COLOR_RGBA2GRAY, 0);
@@ -76,10 +76,10 @@ function get_prices_for_uuid(db, uuid) {
 
 async function initialize_tesseract() {
     const worker = Tesseract.createWorker({
-        workerPath: './Tesseract/worker.min.js',
+        // workerPath: './Tesseract/worker.min.js',
         langPath: './Tesseract/Lang/',
         corePath: './Tesseract/tesseract-core.wasm.js',
-        logger: m => console.log(m)
+        logger: m => m
     });
     Tesseract.setLogging(false);
     await init();
@@ -89,7 +89,8 @@ async function initialize_tesseract() {
         await worker.loadLanguage('fra+eng')
         await worker.initialize('fra+eng')
         await worker.setParameters({
-            tessedit_char_blacklist: '=<>#!;?[]“\"‘¢ï»~{}’ë¥ä_&@²$/£*µ§:\\_|'
+            tessedit_char_blacklist: '=<>#!;?[]“\"‘¢ï»~{}’ë¥ä®_&@²$/£*µ§:\\_|',
+            tessedit_user_defined_dpi: '70'
         });
     }
     return worker
@@ -127,6 +128,7 @@ function levenshtein(a, b) {
     var tmp;
     if (a.length === 0) { return b.length; }
     if (b.length === 0) { return a.length; }
+
     if (a.length > b.length) { tmp = a; a = b; b = tmp; }
 
     var i, j, res, alen = a.length, blen = b.length, row = Array(alen);
