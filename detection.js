@@ -124,26 +124,102 @@ async function OCR(tess_worker, image) {
     return res
 }
 
-function levenshtein(a, b) {
-    var tmp;
-    if (a.length === 0) { return b.length; }
-    if (b.length === 0) { return a.length; }
+function levenshtein(s, t) {
+    if (s === t) {
+        return 0;
+    }
+    var n = s.length, m = t.length;
+    if (n === 0 || m === 0) {
+        return n + m;
+    }
+    var x = 0, y, a, b, c, d, g, h, k;
+    var p = new Array(n);
+    for (y = 0; y < n;) {
+        p[y] = ++y;
+    }
 
-    if (a.length > b.length) { tmp = a; a = b; b = tmp; }
+    for (; (x + 3) < m; x += 4) {
+        var e1 = t.charCodeAt(x);
+        var e2 = t.charCodeAt(x + 1);
+        var e3 = t.charCodeAt(x + 2);
+        var e4 = t.charCodeAt(x + 3);
+        c = x;
+        b = x + 1;
+        d = x + 2;
+        g = x + 3;
+        h = x + 4;
+        for (y = 0; y < n; y++) {
+            k = s.charCodeAt(y);
+            a = p[y];
+            if (a < c || b < c) {
+                c = (a > b ? b + 1 : a + 1);
+            }
+            else {
+                if (e1 !== k) {
+                    c++;
+                }
+            }
 
-    var i, j, res, alen = a.length, blen = b.length, row = Array(alen);
-    for (i = 0; i <= alen; i++) { row[i] = i; }
+            if (c < b || d < b) {
+                b = (c > d ? d + 1 : c + 1);
+            }
+            else {
+                if (e2 !== k) {
+                    b++;
+                }
+            }
 
-    for (i = 1; i <= blen; i++) {
-        res = i;
-        for (j = 1; j <= alen; j++) {
-            tmp = row[j - 1];
-            row[j - 1] = res;
-            res = b[i - 1] === a[j - 1] ? tmp : Math.min(tmp + 1, Math.min(res + 1, row[j] + 1));
+            if (b < d || g < d) {
+                d = (b > g ? g + 1 : b + 1);
+            }
+            else {
+                if (e3 !== k) {
+                    d++;
+                }
+            }
+
+            if (d < g || h < g) {
+                g = (d > h ? h + 1 : d + 1);
+            }
+            else {
+                if (e4 !== k) {
+                    g++;
+                }
+            }
+            p[y] = h = g;
+            g = d;
+            d = b;
+            b = c;
+            c = a;
         }
     }
-    return res;
+
+    for (; x < m;) {
+        var e = t.charCodeAt(x);
+        c = x;
+        d = ++x;
+        for (y = 0; y < n; y++) {
+            a = p[y];
+            if (a < c || d < c) {
+                d = (a > d ? d + 1 : a + 1);
+            }
+            else {
+                if (e !== s.charCodeAt(y)) {
+                    d = c + 1;
+                }
+                else {
+                    d = c;
+                }
+            }
+            p[y] = d;
+            c = a;
+        }
+        h = d;
+    }
+
+    return h;
 }
+
 
 function non_phrasal(line) {
     if (line.length <= 2)

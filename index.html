@@ -17,7 +17,7 @@
 		<div id="main">
 			<article class="thumb">
 				<video class="image" id="player" autoplay>
-					<source src="video.mp4" type="video/mp4">
+					<!-- <source src="video.mp4" type="video/mp4"> -->
 				</video>
 			</article>
 
@@ -28,13 +28,12 @@
 			<article class="thumb" id="second_article">
 				<canvas id="canvas" class="image"></canvas>
 			</article>
-
-
-			<article class="thumb">
+			
+			<!-- <article class="thumb">
 				<a href="images/fulls/03.jpg" class="image"><img src="images/thumbs/03.jpg" alt="" /></a>
 				<h2>Tempus aliquam veroeros</h2>
 				<p>Nunc blandit nisi ligula magna sodales lectus elementum non. Integer id venenatis velit.</p>
-			</article>
+			</article> -->
 
 		</div>
 
@@ -55,10 +54,10 @@
 		};
 
 		// Attach the video stream to the video element and autoplay.
-		// navigator.mediaDevices.getUserMedia(constraints)
-		// 	.then((stream) => {
-		// 		player.srcObject = stream;
-		// 	});
+		navigator.mediaDevices.getUserMedia(constraints)
+			.then((stream) => {
+				player.srcObject = stream;
+			});
 		async function main() {
 
 			[DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
@@ -119,10 +118,11 @@
 
 					db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
 
-						var dt = levenshtein(ocr_res.text, row.name + row.type + row.Text + row.flavorText)
+						var dt = levenshtein(ocr_res.text, row.name + " " + row.type + " " + row.Text + " " + row.flavorText)
 						if (dt < min_dist) {
 							min_dist = dt
 							min_uuid = row.uuid
+							console.log(row.name + row.type + row.Text + row.flavorText)
 						}
 
 					}, function () {
