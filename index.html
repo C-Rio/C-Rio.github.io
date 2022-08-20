@@ -15,81 +15,40 @@
 	<div id="wrapper">
 		<!-- Main -->
 		<div id="main">
-			<article class="thumb">
-				<video class="image" id="player" autoplay>
-					<!-- <source src="video.mp4" type="video/mp4"> -->
-				</video>
-			</article>
+			<video class="image" id="video" autoplay>
+				<source src="video.mp4" type="video/mp4">
+			</video>
 
 			<button id="capture">Capture</button>
 			<p id="price">Price = </p>
 
-			<!-- <article class="thumb" id="second_article" style="visibility: collapse;"> -->
-			<article class="thumb" id="second_article">
-				<canvas id="canvas" class="image"></canvas>
-			</article>
-			
-			<!-- <article class="thumb">
-				<a href="images/fulls/03.jpg" class="image"><img src="images/thumbs/03.jpg" alt="" /></a>
-				<h2>Tempus aliquam veroeros</h2>
-				<p>Nunc blandit nisi ligula magna sodales lectus elementum non. Integer id venenatis velit.</p>
-			</article> -->
 
+			<canvas id="canvas"></canvas> 
 		</div>
-
 	</div>
 
 	<!-- <script src='Tesseract/tesseract.min.js'></script> -->
 	<script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 	<script src="detection.js"></script>
 	<script>
-		const player = document.getElementById('player');
+		const video = document.getElementById('video');
 		const canvas = document.getElementById('canvas');
 		const context = canvas.getContext('2d');
+
+
 		const captureButton = document.getElementById('capture');
 		var paragraph = document.getElementById("price");
 
-		const constraints = {
-			video: true,
-		};
-
-		// Attach the video stream to the video element and autoplay.
-		navigator.mediaDevices.getUserMedia({
-				audio: false,
-				video : {
-					facingMode: 'environment'
-				}
-			})
-			.then((stream) => {
-				player.srcObject = stream;
-			});
 		async function main() {
 
 			[DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
-
-			console.log(DB_var)
-			console.log(tess_worker)
+			console.log("DataBase and Tess loaded")
 
 			captureButton.addEventListener('click', async function () {
-				console.log(player)
 
-				canvas.width = player.clientWidth
-				canvas.height = player.clientHeight
-				console.log("canvas", canvas)
-
-				context.drawImage(player, 0, 0);
-
-				let imgData = context.getImageData(0, 0, player.videoWidth, player.videoHeight);
-				let src = cv.matFromImageData(imgData);
-				let res = crop_image_border(src)
-
-				cv.imshow('canvas', res)
-
-				resize_canvas(canvas, player.clientWidth, player.clientHeight)
-
-				var img_src = canvas.toDataURL("image/png");
-				add_article(img_src)
-
+				canvas.width = video.videoWidth
+				canvas.height = video.videoHeight
+				context.drawImage(video, 0, 0)
 
 				function reload_js(src) {
 					$('script[src="' + src + '"]').remove();
@@ -97,15 +56,21 @@
 				}
 				reload_js('assets/js/main.js');
 
-
 				config = {
 					locateFile: filename => `./Sql.js/${filename}`
 				}
 
+				resize_canvas(canvas, 600, 600)
 
-				resize_canvas(canvas, 800, 800)
-				var ocr_res = await OCR(tess_worker, document.getElementById('canvas'))
-				// var ocr_res = await OCR(tess_worker, img_src)
+				let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+				let src = cv.matFromImageData(imgData);
+				let res = crop_image_border(src, width=600)
+				cv.imshow('canvas', res);
+
+				resize_canvas(canvas, 600, 600)
+				const img = canvas.toDataURL("image/png");
+				var ocr_res = await OCR(tess_worker, img)
+
 				console.log(ocr_res)
 
 				let min_dist = 99999999
@@ -127,7 +92,6 @@
 						if (dt < min_dist) {
 							min_dist = dt
 							min_uuid = row.uuid
-							console.log(row.name + row.type + row.Text + row.flavorText)
 						}
 
 					}, function () {
@@ -141,33 +105,6 @@
 			})
 		}
 
-
-		function add_article(image) {
-
-			var new_article = document.createElement("article");
-			new_article.setAttribute('class', "thumb");
-
-			var new_link = document.createElement('a');
-			new_link.setAttribute('class', "image");
-
-			var new_thumbmail = document.createElement('img');
-			new_thumbmail.setAttribute('src', image);
-			new_thumbmail.setAttribute('alt', "alt");
-
-			new_link.setAttribute('href', image);
-			new_link.appendChild(new_thumbmail);
-
-			new_article.appendChild(new_link)
-
-			var current_snd_article = document.getElementById('second_article');
-			var main = document.getElementById('main');
-
-			main.insertBefore(new_article, current_snd_article)
-
-			current_snd_article.id = "";
-			new_article.id = "second_article";
-
-		}
 
 
 		function resize_canvas(canvas, new_width, new_height) {

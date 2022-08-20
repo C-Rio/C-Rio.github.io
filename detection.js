@@ -1,7 +1,5 @@
 
 function crop_image_border(mat) {
-    // let mat = cv.imread(imgElement)
-    maintain_aspect_ratio_resize(mat, mat, width = 750)
 
     let mat_gray = new cv.Mat();
     cv.cvtColor(mat, mat_gray, cv.COLOR_RGBA2GRAY, 0);
@@ -53,7 +51,7 @@ function crop_image_border(mat) {
     let rect = cv.boundingRect(hull)
     let rect2 = new cv.Rect(rect.x, rect.y, rect.width, rect.height)
     var final = mat.roi(rect2)
-    // maintain_aspect_ratio_resize(final, final, 750)
+  
     return final
 }
 
@@ -103,13 +101,11 @@ async function OCR(tess_worker, image) {
     async function work() {
 
         let result = await tess_worker.detect(image)
-        console.log(result.data)
 
         result = await tess_worker.recognize(image)
         var lines = result.data.text.split("\n")
 
         var filtered = lines.filter(non_phrasal)
-        console.log(filtered)
 
         var final = filtered.join(' ')
         console.log(final)
