@@ -76,7 +76,7 @@ async function initialize_tesseract() {
     const worker = Tesseract.createWorker({
         // workerPath: './Tesseract/worker.min.js',
         langPath: './Tesseract/Lang/',
-        corePath: './Tesseract/tesseract-core.wasm.js',
+        corePath: './Tesseract/tesseract_js/tesseract-core.wasm.js',
         logger: m => m
     });
     Tesseract.setLogging(false);
