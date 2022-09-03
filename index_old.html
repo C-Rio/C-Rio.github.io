@@ -1,118 +1,150 @@
-<!DOCTYPE html>
 <html>
 
 <head>
-  <meta charset="utf-8">
-  <title>MTG card detection</title>
-
+	<title>MTG cards prices</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<noscript>
+		<link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
 </head>
 
-<body>
-  <p id="price">Price = </p>
-  <canvas id="canvasOutput"></canvas>
+<body class="is-preload">
+
+	<!-- Wrapper -->
+	<div id="wrapper">
+		<!-- Main -->
+		<div id="main">
+			<video class="image" id="video" autoplay>
+				<source src="video.mp4" type="video/mp4">
+			</video>
+
+			<button id="capture">Capture</button>
+			<p id="price">Price = </p>
+
+
+			<canvas id="canvas"></canvas> 
+		</div>
+	</div>
+
+	<script src='Tesseract/tesseract.min.js'></script>
+	<!-- <script src='https://unpkg.com/tesseract.js@3.0.1/dist/tesseract.min.js'></script> -->
+	
+	<script src="detection.js"></script>
+	<script>
+		const video = document.getElementById('video');
+		const canvas = document.getElementById('canvas');
+		const context = canvas.getContext('2d');
+
+
+		const captureButton = document.getElementById('capture');
+		var paragraph = document.getElementById("price");
+
+		async function main() {
+
+			[DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
+			var Uints = new Uint8Array(DB_var);
+			config = {
+					locateFile: filename => `./Sql.js/${filename}`
+				}
+
+			let sql_js = initSqlJs(config)
+			console.log("DataBase and Tess loaded")
+
+			captureButton.addEventListener('click', async function () {
+
+				canvas.width = video.videoWidth
+				canvas.height = video.videoHeight
+				context.drawImage(video, 0, 0)
+
+				resize_canvas(canvas, 600, 600)
+
+				let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+				let src = cv.matFromImageData(imgData);
+				let res = crop_image_border(src, width=600)
+				cv.imshow('canvas', res);
+
+				resize_canvas(canvas, 600, 600)
+				const img = canvas.toDataURL("image/png");
+				console.log(tess_worker, img)
+				var ocr_res = await OCR(tess_worker, img)
+
+				let min_dist = 99999999
+				let min_uuid = null
+
+				sql_js.then(function (SQL) {
+					db = new SQL.Database(Uints);
+
+					if (ocr_res.lang == "eng")
+						query = "SELECT name, Text, flavorText, type, uuid FROM cards"
+					else if (ocr_res.lang == "fra")
+						query = "SELECT name, Text, flavorText, type, uuid FROM foreign_data"
+
+					db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
+						var dt = levenshtein(ocr_res.text, [row.name, row.type, row.Text, row.flavorText].join(" "))
+						if (dt < min_dist) {
+							min_dist = dt
+							min_uuid = row.uuid
+						}
+
+					}, function () {
+						console.log("min_uuid =", min_uuid)
+						pri = get_prices_for_uuid(db, min_uuid)
+						paragraph.textContent += JSON.stringify(pri)
+
+					});
+
+				});
+			})
+		}
 
 
 
-  <video id="player" autoplay>
-    <source src="video.mp4" type="video/mp4">
-  </video>
-  <button id="capture">Capture</button>
+		function resize_canvas(canvas, new_width, new_height) {
+			var tempCanvas = document.createElement('canvas');
+			tempCanvas.width = canvas.width;
+			tempCanvas.height = canvas.height;
 
-  <canvas id="canvas"></canvas>
+			aspect_ratio = canvas.width / canvas.height
+			if (aspect_ratio >= 1) {
+				img_width = new_width
+				img_height = img_width * (1 / aspect_ratio)
+			}
+			else {
+				img_height = new_height
+				img_width = img_height * aspect_ratio
+			}
 
-  <script src='Tesseract/tesseract.min.js'></script>
-  <script src="detection.js"></script>
-  <script>
-    const player = document.getElementById('player');
-    const canvas = document.getElementById('canvas');
-    const context = canvas.getContext('2d');
-    const captureButton = document.getElementById('capture');
+			// save your canvas into temp canvas
+			tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
 
-    var paragraph = document.getElementById("price");
+			// resize canvas as needed, probably in response to mouse events
+			canvas.width = new_width;
+			canvas.height = new_height;
 
-    const constraints = {
-      video: true,
-    };
-    // // Attach the video stream to the video element and autoplay.
-    // navigator.mediaDevices.getUserMedia(constraints)
-    //   .then((stream) => {
-    //     player.srcObject = stream;
-    //   });
-
-
-    async function main() {
-
-      [DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
-
-      console.log(DB_var)
-      console.log(tess_worker)
-
-      captureButton.addEventListener('click', async function () {
-        console.log("Snapshot Taken")
-        console.log(player)
-        canvas.width = player.videoWidth
-        canvas.height = player.videoHeight
-        // Draw the video frame to the canvas.
-        context.drawImage(player, 0, 0, player.videoWidth, player.videoHeight, 0, 0, canvas.width, canvas.height);
-
-
-        let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
-        let src = cv.matFromImageData(imgData);
-        let res = crop_image_border(src)
-        cv.imshow('canvasOutput', res)
-
-
-        config = {
-          locateFile: filename => `./Sql.js/${filename}`
-        }
-        console.log(DB_var)
-
-        const exampleImage = document.getElementById('canvasOutput')
-
-        var ocr_res = await OCR(tess_worker, exampleImage)
-        console.log(ocr_res)
-
-        let min_dist = 99999999
-        let min_uuid = null
-
-        initSqlJs(config).then(function (SQL) {
-          var Uints = new Uint8Array(DB_var);
-          db = new SQL.Database(Uints);
-
-          if (ocr_res.lang == "eng")
-            query = "SELECT name, Text, flavorText, type, uuid FROM cards"
-          else if (ocr_res.lang == "fra")
-            query = "SELECT name, Text, flavorText, type, uuid FROM foreign_data"
-
-
-          db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
-            var dt = levenshtein(ocr_res.text, row.name + row.type + row.Text + row.flavorText)
-            if (dt < min_dist) {
-              min_dist = dt
-              min_uuid = row.uuid
-            }
-
-          }, function () {
-            console.log("min_uuid =", min_uuid)
-            pri = get_prices_for_uuid(db, min_uuid)
-            paragraph.textContent += JSON.stringify(pri)
-
-          });
-
-        });
-      })
-    }
-
-    main()
-
-  </script>
+			// draw temp canvas back into canvas, scaled as needed
+			canvas.getContext('2d').drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, img_width, img_height)
+			// canvas.getContext('2d').drawImage(tempCanvas, 0, 0)
+		}
 
 
 
-  <script src='./Sql.js/sql-asm.js'></script>
-  <script src='franc-min.js'></script>
-  <script async src="opencv.js" onload="console.log('Opencv Loaded');" type="text/javascript"></script>
+		main()
+	</script>
 
+
+
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/jquery.poptrox.min.js"></script>
+	<script src="assets/js/browser.min.js"></script>
+	<script src="assets/js/breakpoints.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/main.js"></script>
+
+	<script src='./Sql.js/sql-wasm.js'></script>
+	<script src='franc-min.js'></script>
+	<script async src="opencv.js" onload="console.log('Opencv Loaded');" type="text/javascript"></script>
 </body>
 
 </html>

@@ -108,14 +108,12 @@ async function OCR(tess_worker, image) {
         var filtered = lines.filter(non_phrasal)
 
         var final = filtered.join(' ')
-        console.log(final)
         res.text = final
 
         var lang = franc(final)
-        console.log(lang)
         res.lang = lang
 
-        await tess_worker.terminate();
+        // await tess_worker.terminate();
     }
     return res
 }

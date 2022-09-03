@@ -1,84 +1,161 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
+	<!-- META -->
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="uisual" content="Made with Uisual (uisual.com)">
+	<meta name="referrer" content="unsafe-url">
+	<meta name="robots" content="index, follow">
+	<!-- SPEED -->
+	<link rel="preconnect" href="https://res.cloudinary.com">
+	<link rel="dns-prefetch" href="https://res.cloudinary.com">
+
+	<!-- PERFORMANCE -->
+	<link rel="preload" as="style" href="style.css">
+	<link rel="stylesheet" href="style.css">
+	<!-- TITLE -->
 	<title>MTG cards prices</title>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-	<link rel="stylesheet" href="assets/css/main.css" />
-	<noscript>
-		<link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
 </head>
 
-<body class="is-preload">
+<body>
+	<main role="main">
+		<section class="ui-section-hero">
+			<div class="ui-layout-container">
+				<!-- COPYWRITING -->
+				<div class="ui-layout-column-6 ui-layout-column-center">
+					<h1>Magic card price</h1>
+					<p class="ui-text-intro">Take a picture of a MTG card to view its price.</p>
+					<!-- CTA -->
+					<div class="ui-component-cta ui-layout-flex">
+						<a href="#" role="link" id="capture" aria-label="#"
+							class="ui-component-button ui-component-button-normal ui-component-button-primary">Take
+							photo</a>
+						<!-- <button class="ui-component-button ui-component-button-normal ui-component-button-primary" id="capture">Take photo</button> -->
+					</div>
+				</div>
+				<!-- IMAGE -->
+				<video id="video" class="ui-section-hero" autoplay>
+					<!-- <source src="video.mp4" type="video/mp4"> -->
+				</video>
+				<canvas id="canvas" style="display:none;"></canvas>
+			</div>
+		</section>
+		<section class="ui-section-feature">
+			<div class="ui-layout-container">
+				<h2>Searched cards</h2>
+				<p class="ui-text-intro">Price will appear after a few seconds</p>
+				<!-- FEATURE -->
+				<div id="cardHolder" class="ui-section-feature__layout ui-layout-grid ui-layout-grid-3">
+				</div>
+			</div>
+		</section>
 
-	<!-- Wrapper -->
-	<div id="wrapper">
-		<!-- Main -->
-		<div id="main">
-			<video class="image" id="video" autoplay>
-				<source src="video.mp4" type="video/mp4">
-			</video>
-
-			<button id="capture">Capture</button>
-			<p id="price">Price = </p>
-
-
-			<canvas id="canvas"></canvas> 
+	</main>
+	<!-- <footer role="contentinfo" class="ui-section-footer">
+		<div class="ui-layout-container">
+			<div class="ui-section-footer__layout ui-layout-flex">
+				 COPYRIGHT
+				<p class="ui-section-footer--copyright ui-text-note"><small>&copy; 0000 Uisual</small></p>
+				<MENU
+				<a href="#" role="link" aria-label="#" class="ui-text-note"><small>Features</small></a>
+				<a href="#" role="link" aria-label="#" class="ui-text-note"><small>Help</small></a>
+				<a href="#" role="link" aria-label="#" class="ui-text-note"><small>Terms</small></a>
+			</div>
 		</div>
-	</div>
+	</footer> -->
 
 	<script src='Tesseract/tesseract.min.js'></script>
-	<!-- <script src='https://unpkg.com/tesseract.js@3.0.1/dist/tesseract.min.js'></script> -->
-	
 	<script src="detection.js"></script>
+
+
 	<script>
 		const video = document.getElementById('video');
+		constraints = {
+			audio: false,
+			video: {
+				facingMode: { exact: "environment" }
+			}
+		}
+		navigator.mediaDevices.getUserMedia(constraints)
+		.then((stream) => {
+		   video.srcObject = stream;
+		 });
+
+		function addCard(h4Content, pContent, id, img_src) {
+			var newDiv = document.createElement("div");
+			newDiv.className = 'ui-component-card ui-layout-column-4';
+
+
+			// <img src="https://res.cloudinary.com/uisual/image/upload/assets/graphics/chat.png"
+			// 				loading="lazy" alt="#" class="ui-component-card--image">
+			var newimg = document.createElement('img');
+			newimg.className = "ui-component-card--image"
+			newimg.src = img_src
+
+			var newh4 = document.createElement('h4');
+			newh4.className = "ui-component-card--title"
+			newh4.id= "card_" + id
+			var newh4Content = document.createTextNode(h4Content);
+
+			var newp = document.createElement('p');
+			newp.id= "price_" + id
+			var newpContent = document.createTextNode(pContent);
+		
+			newp.appendChild(newpContent);
+			newh4.appendChild(newh4Content);
+			newDiv.appendChild(newimg);
+			newDiv.appendChild(newh4);
+			newDiv.appendChild(newp);
+			document.getElementById('cardHolder').prepend(newDiv);
+		}
+		
+		
 		const canvas = document.getElementById('canvas');
 		const context = canvas.getContext('2d');
 
-
 		const captureButton = document.getElementById('capture');
-		var paragraph = document.getElementById("price");
 
 		async function main() {
 
-			[DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
+			var id = 0
+
+			var [DB_var, tess_worker] = await Promise.all([load_database('AllPrintings.sqlite'), initialize_tesseract()]);
+			var Uints = new Uint8Array(DB_var);
+			config = {
+				locateFile: filename => `./Sql.js/${filename}`
+			}
+
+			let sql_js = initSqlJs(config)
 			console.log("DataBase and Tess loaded")
 
 			captureButton.addEventListener('click', async function () {
-
 				canvas.width = video.videoWidth
 				canvas.height = video.videoHeight
 				context.drawImage(video, 0, 0)
-
-				function reload_js(src) {
-					$('script[src="' + src + '"]').remove();
-					$('<script>').attr('src', src).appendTo('head');
-				}
-				reload_js('assets/js/main.js');
-
-				config = {
-					locateFile: filename => `./Sql.js/${filename}`
-				}
 
 				resize_canvas(canvas, 600, 600)
 
 				let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
 				let src = cv.matFromImageData(imgData);
-				let res = crop_image_border(src, width=600)
+				let res = crop_image_border(src, width = 600)
 				cv.imshow('canvas', res);
+
+				addCard("Card is loading", "Price is loading", id, canvas.toDataURL())
+				var paragraph = document.getElementById("price_" + id);
+				var cardH4 = document.getElementById("card_" + id);
 
 				resize_canvas(canvas, 600, 600)
 				const img = canvas.toDataURL("image/png");
+				console.log(tess_worker, img)
 				var ocr_res = await OCR(tess_worker, img)
-
-				console.log(ocr_res)
 
 				let min_dist = 99999999
 				let min_uuid = null
+				let min_name = ""
 
-				initSqlJs(config).then(function (SQL) {
-					var Uints = new Uint8Array(DB_var);
+				sql_js.then(function (SQL) {
 					db = new SQL.Database(Uints);
 
 					if (ocr_res.lang == "eng")
@@ -86,23 +163,24 @@
 					else if (ocr_res.lang == "fra")
 						query = "SELECT name, Text, flavorText, type, uuid FROM foreign_data"
 
-
 					db.each("SELECT name, Text, flavorText, type, uuid FROM cards", function (row) {
-
-						var dt = levenshtein(ocr_res.text, row.name + " " + row.type + " " + row.Text + " " + row.flavorText)
+						var dt = levenshtein(ocr_res.text, [row.name, row.type, row.Text, row.flavorText].join(" "))
 						if (dt < min_dist) {
 							min_dist = dt
 							min_uuid = row.uuid
+							min_name = row.name
 						}
 
 					}, function () {
 						console.log("min_uuid =", min_uuid)
 						pri = get_prices_for_uuid(db, min_uuid)
-						paragraph.textContent += JSON.stringify(pri)
+						paragraph.textContent = JSON.stringify(pri)
+						cardH4.textContent = min_name
 
 					});
 
 				});
+				id += 1
 			})
 		}
 
@@ -135,24 +213,13 @@
 			// canvas.getContext('2d').drawImage(tempCanvas, 0, 0)
 		}
 
-
-
 		main()
 	</script>
-
-
-
-	<!-- Scripts -->
-	<script src="assets/js/jquery.min.js"></script>
-	<script src="assets/js/jquery.poptrox.min.js"></script>
-	<script src="assets/js/browser.min.js"></script>
-	<script src="assets/js/breakpoints.min.js"></script>
-	<script src="assets/js/util.js"></script>
-	<script src="assets/js/main.js"></script>
 
 	<script src='./Sql.js/sql-wasm.js'></script>
 	<script src='franc-min.js'></script>
 	<script async src="opencv.js" onload="console.log('Opencv Loaded');" type="text/javascript"></script>
+
 </body>
 
 </html>
