@@ -28,17 +28,17 @@
 					<h1>Magic card price</h1>
 					<p class="ui-text-intro">Take a picture of a MTG card to view its price.</p>
 					<!-- CTA -->
-					<div class="ui-component-cta ui-layout-flex">
-						<a href="#" role="link" id="capture" aria-label="#"
-							class="ui-component-button ui-component-button-normal ui-component-button-primary">Take
-							photo</a>
-						<!-- <button class="ui-component-button ui-component-button-normal ui-component-button-primary" id="capture">Take photo</button> -->
-					</div>
+
 				</div>
 				<!-- IMAGE -->
 				<video id="video" class="ui-section-hero" autoplay>
 					<!-- <source src="video.mp4" type="video/mp4"> -->
 				</video>
+				<div class="ui-component-cta ui-layout-flex">
+					<a href="#" role="link" id="capture" aria-label="#"
+						class="ui-component-button ui-component-button-normal ui-component-button-primary">Take
+						photo</a>
+				</div>
 				<canvas id="canvas" style="display:none;"></canvas>
 			</div>
 		</section>
@@ -75,8 +75,6 @@
 		const video = document.getElementById('video');
 		constraints = {
 			video: {
-				width: 1280,
-				height: 720,
 				facingMode: { exact: "environment" }
 			}
 		}
@@ -135,18 +133,18 @@
 				canvas.height = video.videoHeight
 				context.drawImage(video, 0, 0)
 
-				resize_canvas(canvas, 600, 600)
+				resize_canvas(canvas, 700, 700)
 
 				let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
 				let src = cv.matFromImageData(imgData);
-				let res = crop_image_border(src, width = 600)
+				let res = crop_image_border(src, width = 700)
 				cv.imshow('canvas', res);
 
 				addCard("Card is loading", "Price is loading", id, canvas.toDataURL())
 				var paragraph = document.getElementById("price_" + id);
 				var cardH4 = document.getElementById("card_" + id);
 
-				resize_canvas(canvas, 600, 600)
+				resize_canvas(canvas, 700, 700)
 				const img = canvas.toDataURL("image/png");
 				console.log(tess_worker, img)
 				var ocr_res = await OCR(tess_worker, img)
