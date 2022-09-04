@@ -71,25 +71,25 @@
 
 
 	<script>
+		
 		const video = document.getElementById('video');
 		constraints = {
-			audio: false,
 			video: {
+				width: 1280,
+				height: 720,
 				facingMode: { exact: "environment" }
 			}
 		}
 		navigator.mediaDevices.getUserMedia(constraints)
 		.then((stream) => {
-		   video.srcObject = stream;
-		 });
+		video.srcObject = stream;
+		});
+
 
 		function addCard(h4Content, pContent, id, img_src) {
 			var newDiv = document.createElement("div");
 			newDiv.className = 'ui-component-card ui-layout-column-4';
 
-
-			// <img src="https://res.cloudinary.com/uisual/image/upload/assets/graphics/chat.png"
-			// 				loading="lazy" alt="#" class="ui-component-card--image">
 			var newimg = document.createElement('img');
 			newimg.className = "ui-component-card--image"
 			newimg.src = img_src
